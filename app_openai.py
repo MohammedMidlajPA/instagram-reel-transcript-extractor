@@ -22,49 +22,150 @@ class InstagramReelTranscript:
         self.client = OpenAI(api_key=self.openai_key)
     
     def download_instagram_video(self, url):
-        """Download Instagram video using yt-dlp"""
+        """Download Instagram video using yt-dlp with improved error handling"""
+        max_retries = 3
+        retry_delay = 2
+        
+        for attempt in range(max_retries):
+            try:
+                # Create a unique temporary file path
+                temp_dir = tempfile.gettempdir()
+                timestamp = int(time.time())
+                temp_filename = f"instagram_video_{timestamp}.%(ext)s"
+                
+                # Configure yt-dlp options with better error handling
+                ydl_opts = {
+                    'format': 'best[height<=720]/best',  # Prefer lower resolution, fallback to best
+                    'outtmpl': os.path.join(temp_dir, temp_filename),
+                    'quiet': True,
+                    'no_warnings': True,
+                    'extract_flat': False,
+                    'socket_timeout': 30,  # 30 second timeout
+                    'retries': 3,  # Retry failed downloads
+                    'fragment_retries': 3,  # Retry failed fragments
+                    'http_chunk_size': 10485760,  # 10MB chunks
+                    'concurrent_fragment_downloads': 1,  # Single thread to avoid pipe issues
+                    'ignoreerrors': False,
+                    'no_check_certificate': True,  # Sometimes helps with SSL issues
+                    'prefer_insecure': False,
+                    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
+                
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    # Extract info first
+                    info = ydl.extract_info(url, download=False)
+                    if not info:
+                        raise Exception("Could not extract video information")
+                    
+                    video_title = info.get('title', 'instagram_video')
+                    video_id = info.get('id', str(timestamp))
+                    
+                    # Clean title for filename
+                    safe_title = "".join(c for c in video_title if c.isalnum() or c in (' ', '-', '_')).rstrip()
+                    safe_title = safe_title[:50]  # Limit length
+                    
+                    # Update output template with safe title
+                    ydl_opts['outtmpl'] = os.path.join(temp_dir, f"{safe_title}_{video_id}.%(ext)s")
+                    
+                    # Download the video
+                    ydl.download([url])
+                    
+                    # Find the downloaded file
+                    downloaded_files = []
+                    for file in os.listdir(temp_dir):
+                        if (file.startswith(safe_title) or file.startswith(f"instagram_video_{timestamp}")) and \
+                           file.endswith(('.mp4', '.webm', '.mkv', '.mov', '.m4v')):
+                            file_path = os.path.join(temp_dir, file)
+                            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                                downloaded_files.append((file_path, os.path.getctime(file_path)))
+                    
+                    if downloaded_files:
+                        # Get the most recent file
+                        video_path = max(downloaded_files, key=lambda x: x[1])[0]
+                        return video_path, info
+                    
+                    # If no files found, try to find any recent video files
+                    all_video_files = []
+                    for file in os.listdir(temp_dir):
+                        if file.endswith(('.mp4', '.webm', '.mkv', '.mov', '.m4v')):
+                            file_path = os.path.join(temp_dir, file)
+                            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                                # Check if file was created recently (within last 5 minutes)
+                                if time.time() - os.path.getctime(file_path) < 300:
+                                    all_video_files.append((file_path, os.path.getctime(file_path)))
+                    
+                    if all_video_files:
+                        video_path = max(all_video_files, key=lambda x: x[1])[0]
+                        return video_path, info
+                    
+                    raise Exception("No video file found after download")
+                    
+            except Exception as e:
+                error_msg = str(e)
+                st.warning(f"Attempt {attempt + 1}/{max_retries} failed: {error_msg}")
+                
+                if attempt < max_retries - 1:
+                    st.info(f"Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    st.error(f"All attempts failed. Last error: {error_msg}")
+                    return None, None
+        
+        return None, None
+    
+    def download_instagram_video_alternative(self, url):
+        """Alternative download method using different yt-dlp configuration"""
         try:
-            # Configure yt-dlp options
+            temp_dir = tempfile.gettempdir()
+            timestamp = int(time.time())
+            
+            # Alternative configuration - more conservative approach
             ydl_opts = {
-                'format': 'best',  # Use best available format
-                'outtmpl': os.path.join(tempfile.gettempdir(), '%(title)s.%(ext)s'),
+                'format': 'worst[height<=480]/worst',  # Use lower quality to avoid issues
+                'outtmpl': os.path.join(temp_dir, f'instagram_alt_{timestamp}.%(ext)s'),
                 'quiet': True,
                 'no_warnings': True,
                 'extract_flat': False,
+                'socket_timeout': 60,  # Longer timeout
+                'retries': 5,
+                'fragment_retries': 5,
+                'http_chunk_size': 5242880,  # Smaller chunks (5MB)
+                'concurrent_fragment_downloads': 1,
+                'ignoreerrors': True,  # Ignore errors and continue
+                'no_check_certificate': True,
+                'prefer_insecure': True,  # Try HTTP first
+                'user_agent': 'Instagram 219.0.0.12.117 Android',
+                'referer': 'https://www.instagram.com/',
+                'headers': {
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-us,en;q=0.5',
+                    'Accept-Encoding': 'gzip, deflate',
+                    'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
+                    'Connection': 'keep-alive',
+                }
             }
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # Extract info first
                 info = ydl.extract_info(url, download=False)
-                video_title = info.get('title', 'instagram_video')
+                if not info:
+                    return None, None
                 
-                # Download the video
+                # Download with alternative settings
                 ydl.download([url])
                 
-                # Find the downloaded file
-                temp_dir = tempfile.gettempdir()
-                
-                # Look for files with the video title
+                # Find downloaded file
                 for file in os.listdir(temp_dir):
-                    if video_title and file.startswith(video_title[:20]):  # Match by title prefix
-                        video_path = os.path.join(temp_dir, file)
-                        if os.path.exists(video_path):
-                            return video_path, info
-                
-                # Fallback: find any recent video file
-                video_files = [f for f in os.listdir(temp_dir) 
-                             if f.endswith(('.mp4', '.webm', '.mkv', '.mov'))]
-                if video_files:
-                    latest_file = max(video_files, 
-                                    key=lambda x: os.path.getctime(os.path.join(temp_dir, x)))
-                    video_path = os.path.join(temp_dir, latest_file)
-                    if os.path.exists(video_path):
-                        return video_path, info
+                    if file.startswith(f'instagram_alt_{timestamp}') and \
+                       file.endswith(('.mp4', '.webm', '.mkv', '.mov', '.m4v')):
+                        file_path = os.path.join(temp_dir, file)
+                        if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                            return file_path, info
                 
                 return None, None
                 
         except Exception as e:
-            st.error(f"Error downloading video: {str(e)}")
+            st.warning(f"Alternative download method failed: {str(e)}")
             return None, None
     
     def extract_audio(self, video_path):
@@ -122,7 +223,12 @@ class InstagramReelTranscript:
             
             video_path, video_info = self.download_instagram_video(reel_url)
             if not video_path:
-                return {"success": False, "error": "Failed to download video", "data": None}
+                # Try alternative download method
+                st.warning("Primary download failed, trying alternative method...")
+                video_path, video_info = self.download_instagram_video_alternative(reel_url)
+                
+            if not video_path:
+                return {"success": False, "error": "Failed to download video. This could be due to:\n- Private or restricted Instagram account\n- Network connectivity issues\n- Instagram rate limiting\n- Video format not supported\n- Instagram blocking automated downloads\n\nTry again in a few minutes or with a different Instagram reel.", "data": None}
             
             # Step 2: Extract audio
             status_text.text("🎵 Extracting audio from video...")
