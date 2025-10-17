@@ -25,7 +25,7 @@ A powerful Python application that extracts complete transcript data from Instag
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/instagram-reel-transcript-extractor.git
+   git clone https://github.com/MohammedMidlajPA/instagram-reel-transcript-extractor.git
    cd instagram-reel-transcript-extractor
    ```
 
@@ -202,8 +202,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 If you encounter any issues or have questions:
 
 1. Check the [Troubleshooting](#troubleshooting) section
-2. Open an [Issue](https://github.com/yourusername/instagram-reel-transcript-extractor/issues)
-3. Create a [Discussion](https://github.com/yourusername/instagram-reel-transcript-extractor/discussions)
+2. Open an [Issue](https://github.com/MohammedMidlajPA/instagram-reel-transcript-extractor/issues)
+3. Create a [Discussion](https://github.com/MohammedMidlajPA/instagram-reel-transcript-extractor/discussions)
 
 ---
 
