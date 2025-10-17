@@ -1,0 +1,6 @@
+# Environment variables for the Instagram Reel Transcript Extractor
+# Copy this file to .env and add your actual API token
+
+# Get your Apify API token from: https://console.apify.com/account/integrations
+APIFY_API_TOKEN=your_apify_api_token_here
+
