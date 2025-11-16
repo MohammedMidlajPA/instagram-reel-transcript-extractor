@@ -14,9 +14,24 @@ load_dotenv()
 
 class InstagramReelTranscript:
     def __init__(self):
-        self.openai_key = os.getenv('OPENAI_API_KEY')
+        # Check Streamlit secrets first (for Streamlit Cloud), then environment variables
+        if 'OPENAI_API_KEY' in st.secrets:
+            self.openai_key = st.secrets['OPENAI_API_KEY']
+        else:
+            self.openai_key = os.getenv('OPENAI_API_KEY')
+        
         if not self.openai_key:
-            st.error("Please set your OPENAI_API_KEY in the .env file")
+            st.error("⚠️ **OpenAI API Key not found!**")
+            st.markdown("""
+            **For Streamlit Cloud:**
+            1. Go to your app dashboard
+            2. Click ⚙️ **Settings** → **Secrets**
+            3. Add: `OPENAI_API_KEY = your_key_here`
+            4. Click **Save**
+            
+            **For local development:**
+            - Create a `.env` file with: `OPENAI_API_KEY=your_key_here`
+            """)
             st.stop()
         
         self.client = OpenAI(api_key=self.openai_key)
