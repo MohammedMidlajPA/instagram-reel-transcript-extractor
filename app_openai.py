@@ -571,8 +571,11 @@ def main():
         **This version uses:**
         - OpenAI Whisper API directly
         - yt-dlp for video downloading
-        - pydub for audio processing
+        - ffmpeg for audio processing
         - No third-party API costs!
+        
+        **Note:** Instagram may block automated downloads due to rate limiting.
+        Make sure reels are from public accounts.
         """)
         
         st.header("💰 Cost Comparison")
