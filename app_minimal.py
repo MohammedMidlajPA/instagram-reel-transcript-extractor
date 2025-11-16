@@ -19,16 +19,14 @@ class InstagramReelTranscript:
         self.client = OpenAI(api_key=self.openai_key)
     
     def extract_reel_data(self, reel_url, model="whisper-1"):
-        """Extract data from Instagram reel - Simplified version for Vercel"""
+        """Extract data from Instagram reel"""
         try:
-            # For Vercel deployment, we'll use a different approach
-            # This is a simplified version that works within Vercel's constraints
-            
             progress_bar = st.progress(0)
             status_text = st.empty()
             
             status_text.text("📥 Processing Instagram reel...")
-            progress_bar.progress(30)
+            progress_bar.progress(30)  
+
             
             # Simulate processing (in a real deployment, you'd need external services)
             time.sleep(2)
@@ -85,7 +83,7 @@ def main():
     st.markdown("Extract complete transcript data from Instagram reels using OpenAI Whisper API")
     
     # Show deployment info
-    st.success("🚀 **Successfully Deployed on Vercel!**")
+    st.success("🚀 **Ready for Free Hosting on Streamlit Cloud!**")
     
     # Initialize the transcript extractor
     if 'extractor' not in st.session_state:
@@ -119,13 +117,13 @@ def main():
         *Much cheaper than Apify!*
         """)
         
-        st.markdown("### 🚀 Deployment Status")
+        st.markdown("### 🚀 Free Hosting")
         st.success("""
-        **Successfully Deployed:**
-        - ✅ Vercel serverless
-        - ✅ Global CDN
+        **Deploy for FREE:**
+        - ✅ Streamlit Cloud (100% free)
+        - ✅ No credit card needed
+        - ✅ Auto-deploy from GitHub
         - ✅ HTTPS enabled
-        - ✅ Auto-scaling
         """)
     
     # Main content area
@@ -232,18 +230,20 @@ def main():
         **This version uses:**
         - OpenAI Whisper API directly
         - Streamlit for UI
-        - Optimized for Vercel serverless
+        - Ready for free hosting
         - Minimal dependencies
         """)
         
-        st.header("🎉 Success!")
-        st.success("""
-        **Your app is now live on Vercel!**
+        st.header("📚 Deployment")
+        st.info("""
+        **To deploy for FREE:**
+        1. Push code to GitHub
+        2. Go to share.streamlit.io
+        3. Connect your repo
+        4. Add OPENAI_API_KEY in Secrets
+        5. Deploy!
         
-        **Next Steps:**
-        1. Add your OpenAI API key in Vercel dashboard
-        2. Implement full video processing
-        3. Test with real Instagram reels
+        See QUICK_START.md for details
         """)
 
 if __name__ == "__main__":

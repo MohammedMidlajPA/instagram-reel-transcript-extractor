@@ -137,21 +137,37 @@ OPENAI_API_KEY=your_openai_api_key_here
 
 ## 🚀 Deployment Options
 
+### 🆓 FREE Hosting - Streamlit Cloud (Recommended)
+
+**100% Free Forever - No Credit Card Required!**
+
+1. Push your code to GitHub
+2. Go to [share.streamlit.io](https://share.streamlit.io)
+3. Sign in with GitHub
+4. Click "New app"
+5. Select your repository
+6. Set Main file: `app_openai.py`
+7. Add `OPENAI_API_KEY` in Secrets
+8. Deploy! Your app will be live at `https://your-app.streamlit.app`
+
+**See [FREE_HOSTING_GUIDE.md](FREE_HOSTING_GUIDE.md) for detailed instructions.**
+
 ### Local Development
 - Run with Streamlit locally
 - Perfect for development and testing
+- `streamlit run app_openai.py`
 
-### Cloud Deployment
+### Alternative Free Hosting
+- **Render** - Free tier (apps sleep after inactivity)
+- **Railway** - Free $5 credit
+- **PythonAnywhere** - Free tier with limitations
+
+### Cloud Deployment (Paid)
 - **Railway** - Recommended for Python apps
 - **Render** - Good for full-stack applications
 - **Heroku** - Traditional PaaS
 - **AWS Lambda** - Serverless option
 - **Google Cloud Functions** - Alternative serverless
-
-### Vercel (Static Demo)
-- Static HTML version available
-- Good for showcasing the UI
-- Limited functionality due to serverless constraints
 
 ## 🔍 Troubleshooting
 

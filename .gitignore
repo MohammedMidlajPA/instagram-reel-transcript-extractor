@@ -1,7 +1,6 @@
 # Environment variables
 .env
 .env.local
-.env.production
 
 # Python
 __pycache__/
@@ -24,15 +23,11 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
 # Virtual environments
 venv/
-env/
 ENV/
-env.bak/
-venv.bak/
-.venv/
+env/
 
 # IDE
 .vscode/
@@ -43,49 +38,21 @@ venv.bak/
 
 # OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
-
-# Streamlit
-.streamlit/
 
 # Temporary files
 *.tmp
 *.temp
-temp/
-tmp/
-
-# Logs
 *.log
-logs/
 
-# Vercel
-.vercel/
-
-# Node modules (if any)
-node_modules/
-
-# Downloaded videos/audio (temporary)
+# Video/audio files (temporary)
 *.mp4
 *.mp3
 *.webm
+*.wav
+*.m4v
 *.mkv
 *.mov
-*.avi
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pytest
-.pytest_cache/
-.coverage
-htmlcov/
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
+# Streamlit
+.streamlit/secrets.toml
