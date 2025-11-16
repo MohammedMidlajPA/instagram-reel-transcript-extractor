@@ -14,6 +14,67 @@ load_dotenv()
 
 class InstagramReelTranscript:
     def __init__(self):
+        pass
+    
+    def normalize_instagram_url(self, url):
+        """Normalize Instagram URL to handle all formats"""
+        if not url:
+            return None
+        
+        # Remove whitespace
+        url = url.strip()
+        
+        # Handle different Instagram URL formats
+        # Support: reel/, p/, tv/, with/without www, with/without https
+        instagram_patterns = [
+            r'https?://(www\.)?instagram\.com/(reel|p|tv)/([A-Za-z0-9_-]+)',
+            r'instagram\.com/(reel|p|tv)/([A-Za-z0-9_-]+)',
+            r'(reel|p|tv)/([A-Za-z0-9_-]+)',
+        ]
+        
+        import re
+        # Extract the post ID from any format
+        for pattern in instagram_patterns:
+            match = re.search(pattern, url)
+            if match:
+                post_type = match.group(2) if len(match.groups()) >= 2 else match.group(1)
+                post_id = match.group(3) if len(match.groups()) >= 3 else match.group(2)
+                
+                # Normalize to standard format
+                normalized = f"https://www.instagram.com/{post_type}/{post_id}/"
+                return normalized
+        
+        # If no pattern matches, try to clean the URL
+        if 'instagram.com' in url:
+            # Remove query parameters and fragments
+            url = url.split('?')[0].split('#')[0]
+            # Ensure it ends with /
+            if not url.endswith('/'):
+                url += '/'
+            # Ensure https://
+            if not url.startswith('http'):
+                url = 'https://' + url
+            return url
+        
+        return None
+    
+    def validate_instagram_url(self, url):
+        """Validate if URL is a valid Instagram URL"""
+        if not url:
+            return False, "URL is empty"
+        
+        normalized = self.normalize_instagram_url(url)
+        if not normalized:
+            return False, "Invalid Instagram URL format"
+        
+        # Check if it's a supported type (reel, p, tv)
+        if '/reel/' in normalized or '/p/' in normalized or '/tv/' in normalized:
+            return True, normalized
+        
+        return False, "URL must be an Instagram reel, post, or TV video"
+    
+    def _init_openai_client(self):
+        """Initialize OpenAI client - separated to avoid issues with __init__"""
         # Check Streamlit secrets first (for Streamlit Cloud), then environment variables
         try:
             if hasattr(st, 'secrets') and 'OPENAI_API_KEY' in st.secrets:
@@ -87,6 +148,12 @@ class InstagramReelTranscript:
     
     def download_instagram_video(self, url):
         """Download Instagram video using yt-dlp with improved error handling"""
+        # Normalize URL first
+        is_valid, normalized_url = self.validate_instagram_url(url)
+        if not is_valid:
+            return None, None
+        
+        url = normalized_url
         max_retries = 5  # Increased retries
         retry_delay = 5  # Longer delay between retries
         
@@ -100,18 +167,18 @@ class InstagramReelTranscript:
                 # Configure yt-dlp options with better error handling
                 # Updated for Instagram's stricter access requirements
                 ydl_opts = {
-                    'format': 'best[height<=720]/best',  # Prefer lower resolution, fallback to best
+                    'format': 'best[height<=720]/best/worst',  # Prefer lower resolution, fallback to best, then worst
                     'outtmpl': os.path.join(temp_dir, temp_filename),
-                    'quiet': False,  # Show errors for debugging
-                    'no_warnings': False,  # Show warnings
+                    'quiet': True,  # Quiet mode to avoid issues
+                    'no_warnings': True,
                     'extract_flat': False,
-                    'socket_timeout': 90,  # Increased timeout for Instagram
-                    'retries': 5,  # More retries
-                    'fragment_retries': 5,  # More fragment retries
+                    'socket_timeout': 120,  # Increased timeout for Instagram
+                    'retries': 10,  # More retries
+                    'fragment_retries': 10,  # More fragment retries
                     'http_chunk_size': 10485760,  # 10MB chunks
                     'concurrent_fragment_downloads': 1,  # Single thread to avoid pipe issues
                     'ignoreerrors': False,
-                    'no_check_certificate': True,  # Sometimes helps with SSL issues
+                    'no_check_certificate': False,  # Use proper certificates
                     'prefer_insecure': False,
                     # Updated user agent to look more like a real browser
                     'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -130,12 +197,6 @@ class InstagramReelTranscript:
                         'Sec-Fetch-Site': 'none',
                         'Cache-Control': 'max-age=0',
                     },
-                    # Try to extract without login
-                    'extractor_args': {
-                        'instagram': {
-                            'skip_login': True,
-                        }
-                    }
                 }
                 
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -301,6 +362,10 @@ class InstagramReelTranscript:
     
     def transcribe_audio(self, audio_path, model="whisper-1"):
         """Transcribe audio using OpenAI Whisper API"""
+        # Initialize client if not already done
+        if not hasattr(self, 'client'):
+            self._init_openai_client()
+        
         try:
             with open(audio_path, 'rb') as audio_file:
                 transcript = self.client.audio.transcriptions.create(
@@ -484,23 +549,38 @@ def main():
         
         # URL input
         reel_url = st.text_input(
-            "Instagram Reel URL",
-            placeholder="https://www.instagram.com/reel/...",
-            help="Paste the Instagram reel URL you want to transcribe"
+            "Instagram URL",
+            placeholder="https://www.instagram.com/reel/... or instagram.com/p/...",
+            help="Paste any Instagram reel, post, or TV video URL"
         )
+        
+        st.caption("Supports: reel/, p/, tv/ - with or without www, with or without https")
         
         # Extract button
         if st.button("🚀 Extract Transcript Data", type="primary", use_container_width=True):
             if not reel_url:
-                st.error("Please enter an Instagram reel URL")
-            elif "instagram.com/reel/" not in reel_url:
-                st.error("Please enter a valid Instagram reel URL")
+                st.error("Please enter an Instagram URL")
             else:
-                with st.spinner("Processing your reel..."):
-                    result = st.session_state.extractor.extract_reel_data(
-                        reel_url=reel_url,
-                        model=selected_model
-                    )
+                # Validate and normalize URL
+                is_valid, result = st.session_state.extractor.validate_instagram_url(reel_url)
+                if not is_valid:
+                    st.error(f"❌ {result}")
+                    st.info("""
+                    **Supported Instagram URL formats:**
+                    - `https://www.instagram.com/reel/ABC123/`
+                    - `https://instagram.com/p/ABC123/`
+                    - `https://www.instagram.com/tv/ABC123/`
+                    - `instagram.com/reel/ABC123`
+                    - `reel/ABC123`
+                    """)
+                else:
+                    # Use normalized URL
+                    normalized_url = result
+                    with st.spinner("Processing your Instagram video..."):
+                        result = st.session_state.extractor.extract_reel_data(
+                            reel_url=normalized_url,
+                            model=selected_model
+                        )
                 
                 if result["success"]:
                     st.success(f"✅ Successfully extracted data!")
@@ -579,8 +659,11 @@ def main():
         - 💰 **Cost Effective**: Only pay OpenAI directly
         
         ### Supported URLs:
-        - Instagram Reels: `https://www.instagram.com/reel/...`
-        - Public reels only
+        - **Reels**: `instagram.com/reel/...`
+        - **Posts**: `instagram.com/p/...`
+        - **TV Videos**: `instagram.com/tv/...`
+        - Works with or without `www` and `https://`
+        - Public content only
         """)
         
         st.header("🔧 Technical Details")
