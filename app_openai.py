@@ -511,7 +511,9 @@ def main():
     
     # Initialize the transcript extractor
     if 'extractor' not in st.session_state:
-        st.session_state.extractor = InstagramReelTranscript()
+        extractor = InstagramReelTranscript()
+        extractor._init_openai_client()  # Initialize OpenAI client
+        st.session_state.extractor = extractor
     
     # Sidebar for configuration
     with st.sidebar:
