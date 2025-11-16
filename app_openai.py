@@ -511,9 +511,13 @@ def main():
     
     # Initialize the transcript extractor
     if 'extractor' not in st.session_state:
-        extractor = InstagramReelTranscript()
-        extractor._init_openai_client()  # Initialize OpenAI client
-        st.session_state.extractor = extractor
+        try:
+            extractor = InstagramReelTranscript()
+            extractor._init_openai_client()  # Initialize OpenAI client
+            st.session_state.extractor = extractor
+        except Exception as e:
+            st.error(f"Error initializing app: {str(e)}")
+            st.stop()
     
     # Sidebar for configuration
     with st.sidebar:
@@ -563,26 +567,46 @@ def main():
             if not reel_url:
                 st.error("Please enter an Instagram URL")
             else:
-                # Validate and normalize URL
-                is_valid, result = st.session_state.extractor.validate_instagram_url(reel_url)
-                if not is_valid:
-                    st.error(f"❌ {result}")
-                    st.info("""
-                    **Supported Instagram URL formats:**
-                    - `https://www.instagram.com/reel/ABC123/`
-                    - `https://instagram.com/p/ABC123/`
-                    - `https://www.instagram.com/tv/ABC123/`
-                    - `instagram.com/reel/ABC123`
-                    - `reel/ABC123`
-                    """)
-                else:
-                    # Use normalized URL
-                    normalized_url = result
-                    with st.spinner("Processing your Instagram video..."):
-                        result = st.session_state.extractor.extract_reel_data(
-                            reel_url=normalized_url,
-                            model=selected_model
-                        )
+                try:
+                    # Ensure extractor is initialized
+                    if 'extractor' not in st.session_state or not hasattr(st.session_state.extractor, 'validate_instagram_url'):
+                        extractor = InstagramReelTranscript()
+                        extractor._init_openai_client()
+                        st.session_state.extractor = extractor
+                    
+                    # Validate and normalize URL
+                    is_valid, result = st.session_state.extractor.validate_instagram_url(reel_url)
+                    if not is_valid:
+                        st.error(f"❌ {result}")
+                        st.info("""
+                        **Supported Instagram URL formats:**
+                        - `https://www.instagram.com/reel/ABC123/`
+                        - `https://instagram.com/p/ABC123/`
+                        - `https://www.instagram.com/tv/ABC123/`
+                        - `instagram.com/reel/ABC123`
+                        - `reel/ABC123`
+                        """)
+                    else:
+                        # Use normalized URL
+                        normalized_url = result
+                        with st.spinner("Processing your Instagram video..."):
+                            result = st.session_state.extractor.extract_reel_data(
+                                reel_url=normalized_url,
+                                model=selected_model
+                            )
+                except AttributeError as e:
+                    st.error(f"❌ Error: {str(e)}")
+                    st.info("Reinitializing extractor...")
+                    try:
+                        extractor = InstagramReelTranscript()
+                        extractor._init_openai_client()
+                        st.session_state.extractor = extractor
+                        st.rerun()
+                    except Exception as e2:
+                        st.error(f"Failed to initialize: {str(e2)}")
+                except Exception as e:
+                    st.error(f"❌ Unexpected error: {str(e)}")
+                    st.info("Please try again or refresh the page.")
                 
                 if result["success"]:
                     st.success(f"✅ Successfully extracted data!")
