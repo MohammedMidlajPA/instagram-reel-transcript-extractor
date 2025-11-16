@@ -47,7 +47,29 @@ class InstagramReelTranscript:
         
         # Initialize OpenAI client with error handling
         try:
-            self.client = OpenAI(api_key=self.openai_key.strip())
+            # Initialize with minimal parameters to avoid version conflicts
+            self.client = OpenAI(
+                api_key=self.openai_key.strip(),
+                timeout=60.0,
+                max_retries=3
+            )
+        except TypeError as e:
+            # Handle version compatibility issues
+            try:
+                # Try with just the API key for older versions
+                self.client = OpenAI(api_key=self.openai_key.strip())
+            except Exception as e2:
+                st.error(f"⚠️ **Error initializing OpenAI client:** {str(e2)}")
+                st.markdown(f"""
+                **Error details:** {str(e2)}
+                
+                **Please check:**
+                1. Your API key is correct in Streamlit Secrets
+                2. The API key format is: `OPENAI_API_KEY = "sk-..."`
+                3. Your OpenAI account has credits
+                4. Try updating the openai package: `pip install --upgrade openai`
+                """)
+                st.stop()
         except Exception as e:
             st.error(f"⚠️ **Error initializing OpenAI client:** {str(e)}")
             st.markdown("""
@@ -55,6 +77,7 @@ class InstagramReelTranscript:
             1. Your API key is correct in Streamlit Secrets
             2. The API key format is: `OPENAI_API_KEY = "sk-..."`
             3. Your OpenAI account has credits
+            4. Try updating the openai package: `pip install --upgrade openai`
             """)
             st.stop()
     
