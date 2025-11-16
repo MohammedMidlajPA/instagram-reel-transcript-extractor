@@ -4,7 +4,7 @@ import tempfile
 import requests
 from openai import OpenAI
 import yt_dlp
-from pydub import AudioSegment
+import subprocess
 import json
 import time
 from dotenv import load_dotenv
@@ -169,19 +169,38 @@ class InstagramReelTranscript:
             return None, None
     
     def extract_audio(self, video_path):
-        """Extract audio from video file"""
+        """Extract audio from video file using ffmpeg"""
         try:
-            # Load video and extract audio
-            video = AudioSegment.from_file(video_path)
+            # Generate audio file path
+            audio_path = video_path.rsplit('.', 1)[0] + '.mp3'
             
-            # Convert to mono and reduce sample rate to save API costs
-            audio = video.set_channels(1).set_frame_rate(16000)
+            # Use ffmpeg to extract audio
+            # Convert to mono, 16kHz sample rate to save API costs
+            cmd = [
+                'ffmpeg',
+                '-i', video_path,
+                '-ac', '1',  # Mono channel
+                '-ar', '16000',  # 16kHz sample rate
+                '-y',  # Overwrite output file
+                audio_path
+            ]
             
-            # Save audio file
-            audio_path = video_path.replace('.mp4', '.mp3').replace('.webm', '.mp3')
-            audio.export(audio_path, format="mp3")
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
             
-            return audio_path
+            if result.returncode == 0 and os.path.exists(audio_path):
+                return audio_path
+            else:
+                st.error(f"Audio extraction failed: {result.stderr}")
+                return None
+                
+        except subprocess.TimeoutExpired:
+            st.error("Audio extraction timeout")
+            return None
         except Exception as e:
             st.error(f"Error extracting audio: {str(e)}")
             return None
