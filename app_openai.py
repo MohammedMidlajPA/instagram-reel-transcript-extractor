@@ -98,13 +98,14 @@ class InstagramReelTranscript:
                 temp_filename = f"instagram_video_{timestamp}.%(ext)s"
                 
                 # Configure yt-dlp options with better error handling
+                # Updated for Instagram's stricter access requirements
                 ydl_opts = {
                     'format': 'best[height<=720]/best',  # Prefer lower resolution, fallback to best
                     'outtmpl': os.path.join(temp_dir, temp_filename),
                     'quiet': True,
                     'no_warnings': True,
                     'extract_flat': False,
-                    'socket_timeout': 30,  # 30 second timeout
+                    'socket_timeout': 60,  # Increased timeout for Instagram
                     'retries': 3,  # Retry failed downloads
                     'fragment_retries': 3,  # Retry failed fragments
                     'http_chunk_size': 10485760,  # 10MB chunks
@@ -112,7 +113,19 @@ class InstagramReelTranscript:
                     'ignoreerrors': False,
                     'no_check_certificate': True,  # Sometimes helps with SSL issues
                     'prefer_insecure': False,
-                    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    # Updated user agent to look more like a real browser
+                    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    # Add referer to look more legitimate
+                    'referer': 'https://www.instagram.com/',
+                    # Additional headers to bypass some restrictions
+                    'headers': {
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                        'Accept-Encoding': 'gzip, deflate, br',
+                        'DNT': '1',
+                        'Connection': 'keep-alive',
+                        'Upgrade-Insecure-Requests': '1',
+                    }
                 }
                 
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -311,7 +324,27 @@ class InstagramReelTranscript:
                 video_path, video_info = self.download_instagram_video_alternative(reel_url)
                 
             if not video_path:
-                return {"success": False, "error": "Failed to download video. This could be due to:\n- Private or restricted Instagram account\n- Network connectivity issues\n- Instagram rate limiting\n- Video format not supported\n- Instagram blocking automated downloads\n\nTry again in a few minutes or with a different Instagram reel.", "data": None}
+                return {
+                    "success": False, 
+                    "error": """❌ **Failed to download Instagram video**
+
+**Common reasons:**
+- 🔒 **Private or restricted account** - The reel must be from a public account
+- ⏱️ **Instagram rate limiting** - Instagram may temporarily block automated access
+- 🚫 **Instagram blocking** - Instagram actively blocks automated downloads
+- 🌐 **Network issues** - Connection problems or timeouts
+
+**Solutions to try:**
+1. ✅ Make sure the Instagram account is **public**
+2. ⏳ **Wait 10-15 minutes** and try again (rate limit resets)
+3. 🔄 Try a **different Instagram reel** URL
+4. 📱 Use a reel from a **different account**
+
+**Note:** Instagram has strict anti-bot measures. Some reels may not be accessible via automated tools. This is an Instagram limitation, not an issue with this app.
+
+**Alternative:** You can download the video manually and use other transcription tools.""", 
+                    "data": None
+                }
             
             # Step 2: Extract audio
             status_text.text("🎵 Extracting audio from video...")
