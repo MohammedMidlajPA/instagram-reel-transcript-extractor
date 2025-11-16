@@ -604,11 +604,14 @@ def main():
                         st.rerun()
                     except Exception as e2:
                         st.error(f"Failed to initialize: {str(e2)}")
+                    result = None  # Set result to None to skip processing
                 except Exception as e:
                     st.error(f"❌ Unexpected error: {str(e)}")
                     st.info("Please try again or refresh the page.")
+                    result = None  # Set result to None to skip processing
                 
-                if result["success"]:
+                # Only process if result is available and successful
+                if result and result.get("success"):
                     st.success(f"✅ Successfully extracted data!")
                     
                     # Display results
