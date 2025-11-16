@@ -87,8 +87,8 @@ class InstagramReelTranscript:
     
     def download_instagram_video(self, url):
         """Download Instagram video using yt-dlp with improved error handling"""
-        max_retries = 3
-        retry_delay = 2
+        max_retries = 5  # Increased retries
+        retry_delay = 5  # Longer delay between retries
         
         for attempt in range(max_retries):
             try:
@@ -102,12 +102,12 @@ class InstagramReelTranscript:
                 ydl_opts = {
                     'format': 'best[height<=720]/best',  # Prefer lower resolution, fallback to best
                     'outtmpl': os.path.join(temp_dir, temp_filename),
-                    'quiet': True,
-                    'no_warnings': True,
+                    'quiet': False,  # Show errors for debugging
+                    'no_warnings': False,  # Show warnings
                     'extract_flat': False,
-                    'socket_timeout': 60,  # Increased timeout for Instagram
-                    'retries': 3,  # Retry failed downloads
-                    'fragment_retries': 3,  # Retry failed fragments
+                    'socket_timeout': 90,  # Increased timeout for Instagram
+                    'retries': 5,  # More retries
+                    'fragment_retries': 5,  # More fragment retries
                     'http_chunk_size': 10485760,  # 10MB chunks
                     'concurrent_fragment_downloads': 1,  # Single thread to avoid pipe issues
                     'ignoreerrors': False,
@@ -119,12 +119,22 @@ class InstagramReelTranscript:
                     'referer': 'https://www.instagram.com/',
                     # Additional headers to bypass some restrictions
                     'headers': {
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
                         'Accept-Language': 'en-US,en;q=0.9',
                         'Accept-Encoding': 'gzip, deflate, br',
                         'DNT': '1',
                         'Connection': 'keep-alive',
                         'Upgrade-Insecure-Requests': '1',
+                        'Sec-Fetch-Dest': 'document',
+                        'Sec-Fetch-Mode': 'navigate',
+                        'Sec-Fetch-Site': 'none',
+                        'Cache-Control': 'max-age=0',
+                    },
+                    # Try to extract without login
+                    'extractor_args': {
+                        'instagram': {
+                            'skip_login': True,
+                        }
                     }
                 }
                 
@@ -179,14 +189,21 @@ class InstagramReelTranscript:
                     
             except Exception as e:
                 error_msg = str(e)
-                st.warning(f"Attempt {attempt + 1}/{max_retries} failed: {error_msg}")
+                # Check if it's a rate limit or login required error
+                is_rate_limit = 'rate-limit' in error_msg.lower() or 'login required' in error_msg.lower()
+                
+                if is_rate_limit:
+                    st.warning(f"⚠️ Attempt {attempt + 1}/{max_retries}: Instagram rate limit detected")
+                else:
+                    st.warning(f"Attempt {attempt + 1}/{max_retries} failed: {error_msg[:100]}...")
                 
                 if attempt < max_retries - 1:
-                    st.info(f"Retrying in {retry_delay} seconds...")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2  # Exponential backoff
+                    # Longer delay for rate limits
+                    delay = retry_delay * (attempt + 1) if is_rate_limit else retry_delay
+                    st.info(f"⏳ Waiting {delay} seconds before retry...")
+                    time.sleep(delay)
                 else:
-                    st.error(f"All attempts failed. Last error: {error_msg}")
+                    st.error(f"❌ All {max_retries} attempts failed. Last error: {error_msg[:200]}")
                     return None, None
         
         return None, None
