@@ -617,7 +617,7 @@ def main():
                     # Display results
                     st.header("📊 Extracted Data")
                     
-                    for i, item in enumerate(result["data"]):
+                    for i, item in enumerate(result.get("data", [])):
                         with st.expander(f"Transcript Results", expanded=True):
                             st.subheader("📝 Full Transcript")
                             st.write(item["transcript"])
