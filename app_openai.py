@@ -421,23 +421,33 @@ class InstagramReelTranscript:
             if not video_path:
                 return {
                     "success": False, 
-                    "error": """❌ **Failed to download Instagram video**
+                    "error": """❌ **Unable to download Instagram video**
 
-**Common reasons:**
-- 🔒 **Private or restricted account** - The reel must be from a public account
-- ⏱️ **Instagram rate limiting** - Instagram may temporarily block automated access
-- 🚫 **Instagram blocking** - Instagram actively blocks automated downloads
-- 🌐 **Network issues** - Connection problems or timeouts
+**Instagram is blocking automated access:**
+Instagram has very strict anti-bot protection that blocks most automated download attempts. This is a platform limitation, not a bug in this app.
 
-**Solutions to try:**
-1. ✅ Make sure the Instagram account is **public**
-2. ⏳ **Wait 10-15 minutes** and try again (rate limit resets)
-3. 🔄 Try a **different Instagram reel** URL
-4. 📱 Use a reel from a **different account**
+**What happened:**
+- The app tried 3 different methods with multiple retries
+- Instagram detected automated access and blocked the request
+- This is common with Instagram's current security measures
 
-**Note:** Instagram has strict anti-bot measures. Some reels may not be accessible via automated tools. This is an Instagram limitation, not an issue with this app.
+**What you can try:**
+1. ⏳ **Wait 30-60 minutes** - Rate limits usually reset after some time
+2. ✅ **Verify the account is public** - Private accounts won't work
+3. 🔄 **Try a different reel** - Some reels may be more accessible
+4. 📱 **Try from a different network/IP** - If possible
+5. 🌐 **Try again tomorrow** - Instagram's blocking is often temporary
 
-**Alternative:** You can download the video manually and use other transcription tools.""", 
+**Why this happens:**
+Instagram actively prevents automated tools from downloading content to protect user privacy and prevent scraping. Even legitimate tools like this one are affected.
+
+**Alternative solutions:**
+- Download the video manually from Instagram
+- Use Instagram's built-in captions if available
+- Screen record the video and extract audio
+- Wait and try again later when rate limits reset
+
+**Note:** This app works when Instagram allows access, but Instagram's blocking is unpredictable and varies by account, content, and time.""", 
                     "data": None
                 }
             
