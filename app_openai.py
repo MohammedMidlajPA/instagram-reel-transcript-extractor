@@ -15,18 +15,23 @@ load_dotenv()
 class InstagramReelTranscript:
     def __init__(self):
         # Check Streamlit secrets first (for Streamlit Cloud), then environment variables
-        if 'OPENAI_API_KEY' in st.secrets:
-            self.openai_key = st.secrets['OPENAI_API_KEY']
-        else:
+        try:
+            if hasattr(st, 'secrets') and 'OPENAI_API_KEY' in st.secrets:
+                self.openai_key = st.secrets['OPENAI_API_KEY']
+            else:
+                self.openai_key = os.getenv('OPENAI_API_KEY')
+        except Exception:
+            # Fallback to environment variable if secrets access fails
             self.openai_key = os.getenv('OPENAI_API_KEY')
         
+        # Validate API key
         if not self.openai_key:
             st.error("⚠️ **OpenAI API Key not found!**")
             st.markdown("""
             **For Streamlit Cloud:**
             1. Go to your app dashboard
             2. Click ⚙️ **Settings** → **Secrets**
-            3. Add: `OPENAI_API_KEY = your_key_here`
+            3. Add: `OPENAI_API_KEY = "your_key_here"`
             4. Click **Save**
             
             **For local development:**
@@ -34,7 +39,24 @@ class InstagramReelTranscript:
             """)
             st.stop()
         
-        self.client = OpenAI(api_key=self.openai_key)
+        # Validate API key format (should start with sk-)
+        if not isinstance(self.openai_key, str) or not self.openai_key.strip():
+            st.error("⚠️ **Invalid API Key Format!**")
+            st.markdown("The API key appears to be empty or invalid. Please check your Streamlit Secrets.")
+            st.stop()
+        
+        # Initialize OpenAI client with error handling
+        try:
+            self.client = OpenAI(api_key=self.openai_key.strip())
+        except Exception as e:
+            st.error(f"⚠️ **Error initializing OpenAI client:** {str(e)}")
+            st.markdown("""
+            **Please check:**
+            1. Your API key is correct in Streamlit Secrets
+            2. The API key format is: `OPENAI_API_KEY = "sk-..."`
+            3. Your OpenAI account has credits
+            """)
+            st.stop()
     
     def download_instagram_video(self, url):
         """Download Instagram video using yt-dlp with improved error handling"""
