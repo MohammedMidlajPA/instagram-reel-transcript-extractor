@@ -660,16 +660,19 @@ def main():
                     
                     with col_download2:
                         # Download as text
-                        text_data = result["data"][0]["transcript"]
-                        st.download_button(
-                            label="📝 Download as Text",
-                            data=text_data,
-                            file_name=f"instagram_reel_transcript_{int(time.time())}.txt",
-                            mime="text/plain"
-                        )
+                        if result.get("data") and len(result["data"]) > 0:
+                            text_data = result["data"][0].get("transcript", "")
+                            st.download_button(
+                                label="📝 Download as Text",
+                                data=text_data,
+                                file_name=f"instagram_reel_transcript_{int(time.time())}.txt",
+                                mime="text/plain"
+                            )
                 
-                else:
-                    st.error(f"❌ Error extracting data: {result['error']}")
+                elif result and not result.get("success"):
+                    # Show error if result exists but failed
+                    error_msg = result.get("error", "Unknown error occurred")
+                    st.error(f"❌ Error extracting data: {error_msg}")
     
     with col2:
         st.header("ℹ️ Instructions")
