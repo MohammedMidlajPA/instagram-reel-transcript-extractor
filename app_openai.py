@@ -154,8 +154,8 @@ class InstagramReelTranscript:
             return None, None
         
         url = normalized_url
-        max_retries = 5  # Increased retries
-        retry_delay = 5  # Longer delay between retries
+        max_retries = 3  # Reduced retries to avoid long waits
+        base_delay = 10  # Start with 10 seconds
         
         for attempt in range(max_retries):
             try:
@@ -166,6 +166,13 @@ class InstagramReelTranscript:
                 
                 # Configure yt-dlp options with better error handling
                 # Updated for Instagram's stricter access requirements
+                # Rotate user agents to avoid detection
+                user_agents = [
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                ]
+                
                 ydl_opts = {
                     'format': 'best[height<=720]/best/worst',  # Prefer lower resolution, fallback to best, then worst
                     'outtmpl': os.path.join(temp_dir, temp_filename),
@@ -173,15 +180,15 @@ class InstagramReelTranscript:
                     'no_warnings': True,
                     'extract_flat': False,
                     'socket_timeout': 120,  # Increased timeout for Instagram
-                    'retries': 10,  # More retries
-                    'fragment_retries': 10,  # More fragment retries
+                    'retries': 3,  # Retries per attempt
+                    'fragment_retries': 3,  # Fragment retries
                     'http_chunk_size': 10485760,  # 10MB chunks
                     'concurrent_fragment_downloads': 1,  # Single thread to avoid pipe issues
                     'ignoreerrors': False,
                     'no_check_certificate': False,  # Use proper certificates
                     'prefer_insecure': False,
-                    # Updated user agent to look more like a real browser
-                    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    # Rotate user agent based on attempt
+                    'user_agent': user_agents[attempt % len(user_agents)],
                     # Add referer to look more legitimate
                     'referer': 'https://www.instagram.com/',
                     # Additional headers to bypass some restrictions
@@ -251,21 +258,27 @@ class InstagramReelTranscript:
             except Exception as e:
                 error_msg = str(e)
                 # Check if it's a rate limit or login required error
-                is_rate_limit = 'rate-limit' in error_msg.lower() or 'login required' in error_msg.lower()
+                is_rate_limit = 'rate-limit' in error_msg.lower() or 'login required' in error_msg.lower() or 'not available' in error_msg.lower()
                 
                 if is_rate_limit:
                     st.warning(f"⚠️ Attempt {attempt + 1}/{max_retries}: Instagram rate limit detected")
+                    if attempt < max_retries - 1:
+                        # Exponential backoff with longer delays for rate limits
+                        delay = base_delay * (2 ** attempt)  # 10s, 20s, 40s
+                        st.info(f"⏳ Waiting {delay} seconds before retry...")
+                        time.sleep(delay)
+                    else:
+                        st.error(f"❌ All {max_retries} attempts failed due to Instagram rate limiting")
+                        return None, None
                 else:
                     st.warning(f"Attempt {attempt + 1}/{max_retries} failed: {error_msg[:100]}...")
-                
-                if attempt < max_retries - 1:
-                    # Longer delay for rate limits
-                    delay = retry_delay * (attempt + 1) if is_rate_limit else retry_delay
-                    st.info(f"⏳ Waiting {delay} seconds before retry...")
-                    time.sleep(delay)
-                else:
-                    st.error(f"❌ All {max_retries} attempts failed. Last error: {error_msg[:200]}")
-                    return None, None
+                    if attempt < max_retries - 1:
+                        delay = base_delay
+                        st.info(f"⏳ Waiting {delay} seconds before retry...")
+                        time.sleep(delay)
+                    else:
+                        st.error(f"❌ All {max_retries} attempts failed. Last error: {error_msg[:200]}")
+                        return None, None
         
         return None, None
     
